@@ -1,0 +1,46 @@
+name: Compile
+
+on:
+  # push:
+    # branches: [ master ]
+  # pull_request:
+    # branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build system setup
+        run: |
+          sudo apt update
+          sudo apt install build-essential ccache ecj fastjar file g++ gawk \
+          gettext git java-propose-classpath libelf-dev libncurses5-dev \
+          libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget \
+          python3-distutils python3-setuptools python3-dev rsync subversion \
+          swig time xsltproc zlib1g-dev 
+
+      - name: Update the feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Configure using config diff file
+        run: |
+          cp diffconfig .config
+          make defconfig
+
+      - name: Build the firmware image
+        run: make -j $(($(nproc)+1)) download world
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          # name: Artifact
+          path: ./bin/targets/
